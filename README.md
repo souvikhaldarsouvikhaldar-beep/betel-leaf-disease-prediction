@@ -50,7 +50,7 @@ betel_leaf_disease_app/
 
 ```bash
 git clone https://github.com/souvikhaldarsouvikhaldar-beep/betel-leaf-disease-prediction.git
-cd betel_leaf_disease_app
+cd betel-leaf-disease-prediction
 ```
 
 ---
