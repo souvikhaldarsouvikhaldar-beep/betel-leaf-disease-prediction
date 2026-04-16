@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Betel Leaf Disease Predictor</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0b0f0a;
+      --surface:     #141a12;
+      --surface2:    #1c2419;
+      --border:      #2a3826;
+      --accent:      #4caf50;
+      --accent-dim:  #2e7d32;
+      --accent-glow: rgba(76,175,80,.25);
+      --text:        #e8f5e9;
+      --text-muted:  #7a9e7e;
+      --danger:      #ef5350;
+      --radius:      14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .leaf-icon { font-size: 2rem; }
+    header h1  { font-size: 1.4rem; font-weight: 700; letter-spacing: .3px; }
+    header span { color: var(--accent); }
+    .badge {
+      margin-left: auto;
+      background: var(--accent-dim);
+      color: #c8e6c9;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: .5px;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 860px;
+      padding: 36px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+    .card-title {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    /* ── Drop Zone ────────────────────────────────────────────── */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .dz-icon  { font-size: 2.8rem; margin-bottom: 12px; }
+    .dz-text  { font-size: 1rem; color: var(--text-muted); }
+    .dz-hint  { font-size: .78rem; color: var(--text-muted); margin-top: 6px; }
+
+    /* ── Preview ──────────────────────────────────────────────── */
+    #preview-wrap {
+      display: none;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    #preview-wrap.visible { display: flex; flex-wrap: wrap; }
+    #preview-img {
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .preview-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .file-name { font-size: .9rem; word-break: break-all; }
+    .file-size { font-size: .78rem; color: var(--text-muted); }
+
+    /* ── Button ───────────────────────────────────────────────── */
+    #analyze-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      letter-spacing: .4px;
+      transition: background .2s, box-shadow .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #analyze-btn:hover  { background: #43a047; box-shadow: 0 0 18px var(--accent-glow); }
+    #analyze-btn:active { transform: scale(.98); }
+    #analyze-btn:disabled { background: #2e3d2c; color: var(--text-muted); cursor: not-allowed; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result ───────────────────────────────────────────────── */
+    #result-card { display: none; }
+    #result-card.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .result-icon { font-size: 2.4rem; }
+    .result-class { font-size: 1.5rem; font-weight: 700; }
+    .result-conf  { font-size: .85rem; color: var(--text-muted); margin-top: 3px; }
+    .conf-value   { color: var(--accent); font-weight: 700; }
+
+    /* confidence bar */
+    .conf-bar-wrap { margin-bottom: 22px; }
+    .conf-bar-bg {
+      background: var(--surface2);
+      border-radius: 8px;
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .conf-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+      border-radius: 8px;
+      transition: width 1s ease;
+    }
+
+    /* prob table */
+    .prob-title {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+    .prob-label { font-size: .83rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prob-pct   { font-size: .82rem; color: var(--text-muted); width: 52px; text-align: right; flex-shrink: 0; }
+    .prob-bar-bg {
+      flex: 2;
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 7px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .prob-bar-fill {
+      height: 100%;
+      background: var(--accent-dim);
+      border-radius: 4px;
+      transition: width .8s ease;
+    }
+    .prob-row.top .prob-label { color: var(--accent); font-weight: 600; }
+    .prob-row.top .prob-bar-fill { background: var(--accent); }
+    .prob-row.top .prob-pct { color: var(--accent); }
+
+    /* ── Error ────────────────────────────────────────────────── */
+    #error-box {
+      display: none;
+      background: rgba(239,83,80,.1);
+      border: 1px solid rgba(239,83,80,.4);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      color: #ef9a9a;
+      font-size: .9rem;
+    }
+    #error-box.visible { display: block; }
+
+    /* ── Reset link ───────────────────────────────────────────── */
+    #reset-link {
+      display: none;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .82rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    #reset-link.visible { display: block; }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: .75rem;
+      color: var(--text-muted);
+      text-align: center;
+      border-top: 1px solid var(--border);
+      width: 100%;
+    }
+    footer span { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header>
+  <div class="leaf-icon">🌿</div>
+  <h1>Betel Leaf <span>Disease Predictor</span></h1>
+  <div class="badge">RBF-SVM · 97% Accuracy</div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Upload card -->
+  <div class="card">
+    <div class="card-title">📤 Upload Betel Leaf Image</div>
+
+    <div id="drop-zone">
+      <input type="file" id="file-input" accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp" />
+      <div class="dz-icon">🖼️</div>
+      <div class="dz-text">Drag &amp; drop an image here, or <strong>click to browse</strong></div>
+      <div class="dz-hint">Supported: PNG · JPG · JPEG · BMP · WEBP</div>
+    </div>
+
+    <!-- image preview -->
+    <div id="preview-wrap" style="margin-top:20px;">
+      <img id="preview-img" src="" alt="preview" />
+      <div class="preview-info">
+        <div class="file-name" id="file-name-text">—</div>
+        <div class="file-size" id="file-size-text">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyze button -->
+  <button id="analyze-btn" disabled>
+    <div class="spinner" id="spinner"></div>
+    <span id="btn-text">🔍 Analyze Leaf</span>
+  </button>
+
+  <!-- Error -->
+  <div id="error-box"></div>
+
+  <!-- Result card -->
+  <div class="card" id="result-card">
+    <div class="card-title">📊 Prediction Result</div>
+
+    <div class="result-header">
+      <div class="result-icon" id="res-icon">🌿</div>
+      <div>
+        <div class="result-class" id="res-class">—</div>
+        <div class="result-conf">Confidence: <span class="conf-value" id="res-conf">—</span></div>
+      </div>
+    </div>
+
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-bg">
+        <div class="conf-bar-fill" id="conf-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="prob-title">All Class Probabilities</div>
+    <div id="prob-rows"></div>
+  </div>
+
+  <!-- Reset -->
+  <a id="reset-link" class="visible" onclick="resetAll()">↩ Upload a different image</a>
+
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer>
+  Powered by <span>ResNeXt50-32x4d</span> feature extraction + <span>RBF-SVM</span> classifier
+</footer>
+
+<!-- ── JavaScript ─────────────────────────────────────────────────────── -->
+<script>
+  const dropZone   = document.getElementById("drop-zone");
+  const fileInput  = document.getElementById("file-input");
+  const previewWrap= document.getElementById("preview-wrap");
+  const previewImg = document.getElementById("preview-img");
+  const fileNameTx = document.getElementById("file-name-text");
+  const fileSizeTx = document.getElementById("file-size-text");
+  const analyzeBtn = document.getElementById("analyze-btn");
+  const btnText    = document.getElementById("btn-text");
+  const spinner    = document.getElementById("spinner");
+  const resultCard = document.getElementById("result-card");
+  const errorBox   = document.getElementById("error-box");
+  const resetLink  = document.getElementById("reset-link");
+
+  let selectedFile = null;
+
+  // ── Disease icon map ────────────────────────────────────────────────────
+  const ICONS = {
+    "Healthy":                "✅",
+    "Anthracnose":            "🍂",
+    "Bacterial Leaf Blight":  "🦠",
+    "Cercospora Leaf Spot":   "🔴",
+    "Leaf Rot":               "🟤",
+    "Powdery Mildew":         "⚪",
+  };
+
+  function getIcon(cls) {
+    return ICONS[cls] || "🌿";
+  }
+
+  // ── Drag & drop ─────────────────────────────────────────────────────────
+  dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+  dropZone.addEventListener("dragleave", ()=> dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop",      e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  fileInput.addEventListener("change", e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file.type.startsWith("image/")) {
+      showError("Please select a valid image file.");
+      return;
+    }
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      previewImg.src = ev.target.result;
+      previewWrap.classList.add("visible");
+      fileNameTx.textContent = file.name;
+      fileSizeTx.textContent = (file.size / 1024).toFixed(1) + " KB";
+      analyzeBtn.disabled = false;
+      hideResult();
+      hideError();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Analyze ─────────────────────────────────────────────────────────────
+  analyzeBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    setLoading(true);
+    hideResult();
+    hideError();
+
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+
+    try {
+      const resp = await fetch("/predict", { method: "POST", body: formData });
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        showError(data.error || "Server error. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      renderResult(data);
+    } catch (err) {
+      showError("Network error: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ── Render result ────────────────────────────────────────────────────────
+  function renderResult(data) {
+    document.getElementById("res-icon").textContent  = getIcon(data["class"]);
+    document.getElementById("res-class").textContent = data["class"];
+    document.getElementById("res-conf").textContent  = data["confidence"].toFixed(2) + "%";
+
+    // animate confidence bar
+    requestAnimationFrame(() => {
+      document.getElementById("conf-bar").style.width = Math.min(data["confidence"], 100) + "%";
+    });
+
+    // prob rows sorted descending
+    const probs = Object.entries(data["probabilities"])
+      .sort((a, b) => b[1] - a[1]);
+
+    const container = document.getElementById("prob-rows");
+    container.innerHTML = "";
+    probs.forEach(([cls, pct]) => {
+      const isTop = cls === data["class"];
+      const row = document.createElement("div");
+      row.className = "prob-row" + (isTop ? " top" : "");
+      row.innerHTML = `
+        <div class="prob-label">${getIcon(cls)} ${cls}</div>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" style="width:0%"></div>
+        </div>
+        <div class="prob-pct">${pct.toFixed(1)}%</div>
+      `;
+      container.appendChild(row);
+      // animate after paint
+      requestAnimationFrame(() => {
+        row.querySelector(".prob-bar-fill").style.width = Math.min(pct, 100) + "%";
+      });
+    });
+
+    resultCard.classList.add("visible");
+    resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function setLoading(on) {
+    analyzeBtn.disabled = on;
+    spinner.style.display = on ? "block" : "none";
+    btnText.textContent   = on ? "Analyzing …" : "🔍 Analyze Leaf";
+  }
+
+  function hideResult() { resultCard.classList.remove("visible"); }
+  function hideError()  { errorBox.classList.remove("visible"); errorBox.textContent = ""; }
+
+  function showError(msg) {
+    errorBox.textContent = "⚠ " + msg;
+    errorBox.classList.add("visible");
+  }
+
+  function resetAll() {
+    selectedFile = null;
+    fileInput.value = "";
+    previewWrap.classList.remove("visible");
+    previewImg.src = "";
+    fileNameTx.textContent = "—";
+    fileSizeTx.textContent = "—";
+    analyzeBtn.disabled = true;
+    document.getElementById("conf-bar").style.width = "0%";
+    hideResult();
+    hideError();
+  }
+</script>
+</body>
+</html>
