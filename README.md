@@ -153,8 +153,8 @@ http://localhost:5000
 
 ## 👨‍💻 Author
 
-**Souvik Haldar**
-**Sayan Kumar Shaw**
+* **Souvik Haldar**
+* **Sayan Kumar Shaw**
 
 ---
 
