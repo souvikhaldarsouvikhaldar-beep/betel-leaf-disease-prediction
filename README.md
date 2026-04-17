@@ -1,4 +1,4 @@
-# 🌿 Betel Leaf Disease Predictor
+# 🌿 Betel Leaf Disease Prediction System (AI-powered)
 
 **Model: RBF-SVM (97% accuracy) + ResNeXt50-32x4d Feature Extraction**
 
