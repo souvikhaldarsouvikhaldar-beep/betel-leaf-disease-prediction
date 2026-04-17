@@ -15,7 +15,7 @@ NO model-path input on the web page.
 Models are auto-loaded from  ./output/resnext50.pth  and  ./output/svm_rbf.pkl
 """
 
-import os
+
 import io
 import numpy as np
 import joblib
