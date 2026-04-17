@@ -351,17 +351,25 @@
   let selectedFile = null;
 
   // ── Disease icon map ────────────────────────────────────────────────────
-  const ICONS = {
-    "Healthy":                "✅",
-    "Anthracnose":            "🍂",
-    "Bacterial Leaf Blight":  "🦠",
-    "Cercospora Leaf Spot":   "🔴",
-    "Leaf Rot":               "🟤",
-    "Powdery Mildew":         "⚪",
+  // Keys are lowercase substrings — matches any class name containing that word.
+  const ICON_MAP = {
+    "healthy":     "✅",
+    "anthracnose": "🍂",
+    "bacterial":   "🦠",
+    "blight":      "🦠",
+    "cercospora":  "🔴",
+    "spot":        "🔴",
+    "rot":         "🟤",
+    "powdery":     "⚪",
+    "mildew":      "⚪",
   };
 
   function getIcon(cls) {
-    return ICONS[cls] || "🌿";
+    const lower = cls.toLowerCase();
+    for (const [key, icon] of Object.entries(ICON_MAP)) {
+      if (lower.includes(key)) return icon;
+    }
+    return "🌿";   // fallback
   }
 
   // ── Drag & drop ─────────────────────────────────────────────────────────

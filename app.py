@@ -1,9 +1,3 @@
-import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-model_path = os.path.join(BASE_DIR, "output", "resnext50.pth")
-svm_path = os.path.join(BASE_DIR, "output", "svm_rbf.pkl")
 """
 Betel Leaf Disease Prediction - Flask Web App
 Model: RBF SVM (97% accuracy) with ResNeXt50-32x4d feature extraction
@@ -15,6 +9,12 @@ NO model-path input on the web page.
 Models are auto-loaded from  ./output/resnext50.pth  and  ./output/svm_rbf.pkl
 """
 
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_path = os.path.join(BASE_DIR, "output", "resnext50.pth")
+svm_path = os.path.join(BASE_DIR, "output", "svm_rbf.pkl")
+
 
 import io
 import numpy as np
@@ -24,6 +24,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from PIL import Image
 from flask import Flask, request, jsonify, render_template
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1.  CLASS NAMES
@@ -81,6 +82,8 @@ extraction_layer = resnext_model._modules.get("avgpool")
 print("[INFO] Loading RBF-SVM classifier ...")
 svm_model = joblib.load(SVM_PATH)
 
+# Print the exact class labels the SVM was trained with — useful for debugging
+print(f"[INFO] SVM classes_: {list(svm_model.classes_)}")
 print("[INFO] Both models loaded successfully. Starting Flask ...")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -159,15 +162,27 @@ def predict():
         X         = feat_vec.reshape(1, -1)              # (1, 2048)
 
         # --- SVM inference ---
-        pred_idx  = int(svm_model.predict(X)[0])
-        proba_arr = svm_model.predict_proba(X)[0]        # (n_classes,)
+        # svm_model.predict() returns the raw label the SVM was trained with.
+        # That label may be a STRING (e.g. "Healthy Leaf") or an INT index —
+        # depending on how the notebook fitted the SVM.
+        # svm_model.classes_ always tells us the exact order used at fit-time.
+        raw_pred  = svm_model.predict(X)[0]          # string OR int
+        proba_arr = svm_model.predict_proba(X)[0]    # shape (n_classes,)
 
-        pred_class  = CLASS_NAMES[pred_idx]
-        confidence  = float(proba_arr[pred_idx]) * 100
+        # svm_model.classes_ is the authoritative ordered list of labels
+        svm_classes = list(svm_model.classes_)       # e.g. ['Healthy Leaf', 'Anthracnose', ...]
 
+        # The predicted class name — always a string
+        pred_class = str(raw_pred)
+
+        # Confidence = probability of the predicted class
+        pred_idx_in_svm = svm_classes.index(raw_pred)
+        confidence = float(proba_arr[pred_idx_in_svm]) * 100
+
+        # Build per-class probability dict using svm_model.classes_ order
         proba_dict = {
-            CLASS_NAMES[i]: round(float(proba_arr[i]) * 100, 2)
-            for i in range(len(CLASS_NAMES))
+            str(svm_classes[i]): round(float(proba_arr[i]) * 100, 2)
+            for i in range(len(svm_classes))
         }
 
         return jsonify({
